@@ -1,0 +1,195 @@
+<?xml version = "1.0" encoding = "UTF-8"?>
+<!DOCTYPE beans PUBLIC "-//SPRING//DTD BEAN//EN"
+"http://www.springframework.org/dtd/spring-beans.dtd">
+<beans>
+   <!-- 
+   Spring configuration works in 2 ways
+    	1) Xml Configuration: 
+    			1)Allows to configure bean definitions and define dependencies between the beans 
+    			2)We can instantiate the bean by using getbean("") of bean defined in the xml.
+    			If dependencies are not met, the application throws an exception when it executes.
+    			In order to throw the exception throw at initialization time instead of execution time, 
+    			we can use Annotation on the @Required dependent object. 
+        2) Annotation:
+        		@Required - set this annotation for setters. This will make sure that spring container must initialize this bean. 
+        		In order to initialize the beans that has @Required Annotation, RequiredAnnotationBeanPostProcessor must be declared in the Spring configuration xml
+        		The exception will occur during the bean initialization instead of when executing the application code.
+        		 
+        		 @Autowired
+        		 
+   Spring Container - manages the objects. Any object can reference any object by providing the id reference, then spring provides an object that requests.
+   This is happening through the Factory pattern.
+   ApplicationContext - bean factory with additional functionality
+
+   LifeCycle Callbacks:
+   
+   In order to close the ApplicationContext, AbstractApplicationContext has a hook to close the context(registerShutDownHook()), when the program ends, it automatically shutdowns the context. 
+  
+   In order to write a method when bean initializes
+             - A bean must implements InitializingBean interface, It has afterPropertiesSet() method which 
+             		can be overrided to write the custom code for bean initialization
+   In order to write a method when bean destroys
+             - A bean must implements DisposableBean interface, It has destroy() method which 
+             		can be overrided to write the custom code for bean destroy, 
+             		
+    The above two interfaces are bound to spring framework. In order not to bound to spring framework, then we create a method in the bean 
+    and then pass the name of the method( init-method="myInit") in spring xml for bean definition. the same applies for destroy (destroy-method="cleanup")
+      
+    we can also configure at the global level for all the beans in the <beans> (default-init-method, default-destroy-method) tag, 
+    if each bean has same "myInit" method and "cleanUp" method           		
+   
+   BeanPostProcessor: Bean Post processors are classes that tells spring some processing needs to be done after the initialization. 
+   					  The code(New class to be created that implements BeanPostProcessor) written will be executed after the initialization of each and every bean. 
+   					  The bean also to be configured in the xml configuration. No need to give the id since it is not going to reference any where.
+   					  if we have multiple bean post processor then we might need to give the order(OrderInterface gives order property) in the configuration xml.
+   					  Usage: Extending the functionality of the framework or some configuraton related changes, 
+   					  There are two methods to be overrided when BeanPostPorcessor Implemented
+   					  Object postProcessBeforeInitialization(Object o, String s ) - This method called before initializing any bean
+   					  Object postProcessAfterInitialization(Object o, String s ) - This method called after completing initialization(completing all the dependency injection)
+   					  2 arguments are - bean Object and bean name configured in the bean definition and it is going to return the same object.
+   					  
+   BeanFactoryPostProcessor: We can execute code when BeanFactory itself is being initialized. 
+   					  Ex: Property Place Holder Configurer ( Spring provides the class for this 
+   					          <bean class="org.springframework.beans.factory.config.PropertyPlaceHolderConfigurer">
+   					          <property name="locations" value="pointsconfig.properties"/> 
+   					          </bean>
+   					          <bean id="phone"  value="test.spring.di.Phone">
+   					          	<property "cell" value="{cell.number}"/>
+   					          </bean> 
+   					      Create a property file use it as a property to the bean class. The property file replaces a value 
+   					      in the bean definition property files during bean factory initialization
+	Coding to Interfaces: As long as the classes(Triangle, Circle, ...) implements the Interface(Shape), We need to make only changes to the configuration file, 
+					not the methods of individual objects that implements that interface.
+   
+   Factory Pattern:
+   An object makes a reference to ApplicationContext in order to get the instance of the bean. ACtxt refers the Spring XML and ACtxt gets the blue print about the object
+   and create a bean and then hands it over to the object.
+   
+   Default Behavior of Beans: 
+   When Spring Container started(meaning when ApplicationContext defined to reference the xml), ACtxt reference the spring XML and create the beans that are defined even if there is no call from the Object
+   So creation of the beans happening during the APplicationContext initialization, not during the object makes a call to reference the objects.
+     
+   The default behavior can be altered for the application context to create the beans only when the object requests.
+   
+   Bean Scopes:
+   
+   1) Singleton(default) - Once the Application Container initializes and references the xml, It initializes one bean per bean definition (one instance per spring container)
+   				  No matter how many calls made by the object, the application context provides the same bean(same object will be passed around)
+   				  By default, all beans are singleton
+   				  Note: Multiple Spring Containers can be configured in same JVM, in that case one per container.
+   2) Prototype - New beans are created with every request or reference(The behavior is same for direct reference or indirect reference in the spring xml).
+                  Spring will wait for the bean request until then it will not create the bean.
+   3) Web-aware Context Bean Scopes
+   			Request - New bean is created per servlet request. No matter of how many bean requests happened with in the request, the same bean is going to be used 
+   			Session - New bean per session. As long as 1 user is accessing, then the same bean will be returned.
+   			Global Session - New bean for Global Http Session(Portlet context)
+   			
+   
+   Scenario:
+   If the bean that has dependents in the XML has singleton scope and dependents have prototype scope, then the application context also initializes the dependent
+   beans, though they have prototype scope(only created when request comes) 
+   
+   ApplicationContextAware: From the above scenario, We are only creating the dependent beans only 1 time during application context initialization. 
+   					If we want to create dependent beans again, we need to get hold of the application context, 
+   					In order to get the ApplicationContext(it's already initialized during the spring container start), the calling bean should implements ApplicationContextAware
+   				    It has setApplicationContext() method which is to be overrided to set the context and then call context.getBean in the calling class to get hold of the bean. 
+   Few more Aware interfaces: ApplicationEventPublisherAWare, BeanClassLoaderAware 			
+   
+   BeanNameAware: Just works same as apctxtaware, It gives the bean name handy when spring container initializes
+   		
+   BeanDefinition Inheritance: 
+   				A bean definition can inherit from the parent class(it can also be an abstract)
+   				parent="ParentBeanName" for the bean
+   				abstract="true" don't create a bean, it will keep it as a reference class.
+   				list merge="true" merge the Lists(applies to other collections), if the same list defined in the different beans
+   				If no merge given for collection, then value will be overrided
+   	
+   	
+   				
+   
+   By Default Autowiring is off
+   1) autowire byName
+          --The reference for the dependent beans not required to specify in the configuration xml if autowire byName for the calling bean.
+          If the member variables of the dependents in the calling bean are matched with bean ids in the xml, then it autowires
+      -- 2) autowire byType does autowiring though the beanid name differs from the member variable name because it looks at the type(test.spring.di.Phone) defined
+      It will not work when it has only variable of each type and corresponding bean in the xml.
+      Point pointA, Point pointB is not going to work.
+      -- 3) autowire constructor does same as type except that it does by using constructor injection instead of setter injection.(The types passed in the constructor must be unique)
+      Autowiring makes difficult for the user to debug, It's good to go for manual wiring.  
+    -->
+   <bean id = "person" class = "test.spring.di.Person" autowire="byType" scope="singleton">
+  	    <property name="beanName">
+  	    <idref bean="person"/>
+  	    </property>
+   		<property name="deviceList">
+   			<list>
+   				<ref bean="phone"></ref>
+   				<ref bean="laptop"></ref>
+   				<ref bean="tablet"></ref>
+   				<ref bean="tablet"></ref>
+   			</list>
+   		</property>
+   		<property name="deviceSet">
+   			<set>
+   				<ref bean="phone"></ref>
+   				<ref bean="laptop"></ref>
+   				<ref bean="tablet"></ref>
+   				<ref bean="tablet"></ref>
+   			</set>
+   		</property>
+   		<property name="deviceMap">
+   			<map>
+   				<entry key="p1" value-ref="phone"/>
+   				<entry key="l1" value-ref="laptop"/>
+   				<entry key="t1" value-ref="tablet"/>
+   			</map>
+   		</property>   		
+   		<property name="name" value="venkat"></property>
+   		<property name="age" value="35"></property>
+   		<!--  <property name ="address">
+			   <bean id="address" class = "test.spring.di.Address">
+			   		<constructor-arg index="0" value="1612"></constructor-arg>
+			   		<constructor-arg index="1" value="GOLDENROD LN"></constructor-arg>
+			   		<constructor-arg index="2" value="KELLER"></constructor-arg>
+			   		<constructor-arg index="3" value="TEXAS"></constructor-arg>
+			   		<constructor-arg index="4" value="USA"></constructor-arg>
+			   		<constructor-arg index="5" value="76248"></constructor-arg>
+			   </bean>
+		  </property>
+		   
+		   <property name ="phone">
+				<ref bean="phone_id"/>
+		  </property>
+     </bean>
+      <bean id="phone_id" class = "test.spring.di.Phone">
+		   		<constructor-arg type="int" value="2142956497"></constructor-arg>
+		   		<constructor-arg type="int" value="2145003763"></constructor-arg>
+		   		<constructor-arg type="int" value="2123230000"></constructor-arg>
+	   </bean>
+	   -->
+	   </bean>
+       <bean id="laptop" class = "test.spring.di.Device">
+	   		<property name="name" value="dell laptop"/>
+	   </bean>		   
+    	   <bean id="phone" class = "test.spring.di.Device">
+	   		<property name="name" value="iphone"/>
+	   </bean>		   
+    	   <bean id="tablet" class = "test.spring.di.Device">
+	   		<property name="name" value="ipad"/>
+	   </bean>		   
+
+     <alias name="person" alias="person-alias"></alias>
+     <bean id = "address" class = "test.spring.di.Address">
+   		<constructor-arg index="0" value="1612"></constructor-arg>
+   		<constructor-arg index="1" value="GOLDENROD LN"></constructor-arg>
+   		<constructor-arg index="2" value="KELLER"></constructor-arg>
+   		<constructor-arg index="3" value="TEXAS"></constructor-arg>
+   		<constructor-arg index="4" value="USA"></constructor-arg>
+   		<constructor-arg index="5" value="76248"></constructor-arg>
+   </bean>
+      <bean id = "phoneObj" class = "test.spring.di.Phone">
+   		<constructor-arg type="int" value="2142956497"></constructor-arg>
+   		<constructor-arg type="int" value="2145003763"></constructor-arg>
+   		<constructor-arg type="int" value="2123230000"></constructor-arg>
+   </bean>
+</beans>
